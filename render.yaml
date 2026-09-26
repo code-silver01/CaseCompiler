@@ -31,8 +31,6 @@ services:
   - type: web
     name: casecompiler-frontend
     env: static
-    region: oregon
-    plan: free
     branch: main
     rootDir: frontend
     buildCommand: npm install && npm run build

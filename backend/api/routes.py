@@ -430,12 +430,34 @@ def _require_session(session_id: str):
     return state
 
 
+MAX_UPLOAD_BYTES_PER_FILE = 10 * 1024 * 1024  # 10MB limit
+
+
 def _validate_upload(upload: UploadFile) -> None:
-    allowed = {".pdf", ".txt", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".md"}
-    suffix = Path(upload.filename or "").suffix.lower()
+    """Validate uploaded file type and size before extraction begins."""
+    allowed = {".pdf", ".jpg", ".jpeg", ".png"}
+    filename = upload.filename or ""
+    suffix = Path(filename).suffix.lower()
+
+    # 1. Type validation: reject anything outside pdf/jpg/jpeg/png
     if suffix not in allowed:
         raise HTTPException(
             400,
-            f"File type '{suffix}' not supported. Allowed: {', '.join(sorted(allowed))}",
+            f"File '{filename}' has unsupported format '{suffix}'. Only PDF, JPG, JPEG, and PNG files are accepted.",
         )
-    # Size check is done at the FastAPI app level via max_upload_size middleware
+
+    # 2. Size validation: reject files over 10MB
+    try:
+        upload.file.seek(0, 2)  # seek to end to measure size
+        size = upload.file.tell()
+        upload.file.seek(0)  # rewind for subsequent reads
+        if size > MAX_UPLOAD_BYTES_PER_FILE:
+            size_mb = size / (1024 * 1024)
+            raise HTTPException(
+                400,
+                f"File '{filename}' exceeds maximum allowed size of 10MB ({size_mb:.1f}MB uploaded).",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("Could not measure size for upload '%s': %s", filename, e)

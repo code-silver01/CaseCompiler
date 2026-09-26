@@ -6,6 +6,7 @@ import ProgressStepper from './components/ProgressStepper'
 import CaseInput from './components/CaseInput'
 import InterviewPanel from './components/InterviewPanel'
 import CaseFileOutput from './components/CaseFileOutput'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // ---- Steps: landing → describe → extract → interview → compile ----
 const STEP_LANDING = 'landing'
@@ -34,8 +35,12 @@ function ErrorBanner({ message, onDismiss }) {
 
 function LoadingOverlay({ message, subtext }) {
   return (
-    <div className="glass-card rounded-2xl p-12 text-center animate-fade-in border border-gold-400/20 shadow-2xl">
-      <div className="relative inline-flex mb-6">
+    <div
+      role="status"
+      aria-live="polite"
+      className="glass-card rounded-2xl p-12 text-center animate-fade-in border border-gold-400/20 shadow-2xl"
+    >
+      <div className="relative inline-flex mb-6" aria-hidden="true">
         <div className="w-16 h-16 rounded-full border-2 border-navy-700 flex items-center justify-center bg-navy-900">
           <Scale size={28} className="text-gold-400" />
         </div>
@@ -43,7 +48,7 @@ function LoadingOverlay({ message, subtext }) {
       </div>
       <p className="text-base font-semibold text-slate-100 mb-2 font-display">{message}</p>
       <p className="text-xs text-slate-400 max-w-sm mx-auto">{subtext || 'Extracting legal entities, scoring evidence reliability, and querying statutory knowledge base…'}</p>
-      <div className="flex justify-center gap-1.5 mt-5">
+      <div className="flex justify-center gap-1.5 mt-5" aria-hidden="true">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
@@ -279,7 +284,7 @@ export default function App() {
       </nav>
 
       {/* Main Studio Container */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <main className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Progress Stepper (hidden on final compile step to maximize document view) */}
         {step !== STEP_COMPILE && (
           <div className="mb-8">
@@ -292,7 +297,7 @@ export default function App() {
 
         {/* STEP 1: DESCRIBE */}
         {step === STEP_DESCRIBE && (
-          <div className="glass-card p-6 sm:p-8 border border-white/[0.08] shadow-2xl">
+          <section aria-label="Case Description Section" className="glass-card p-6 sm:p-8 border border-white/[0.08] shadow-2xl">
             <div className="mb-6">
               <h2 className="font-display text-2xl font-bold text-white mb-1.5">
                 Describe Your Legal Situation
@@ -301,26 +306,30 @@ export default function App() {
                 Provide as much context as you have — key dates, names, amounts in dispute, notices, and attach any contracts or screenshots.
               </p>
             </div>
-            <CaseInput
-              onSubmit={handleSubmit}
-              loading={loading}
-              initialDescription={prefilledDescription}
-              initialFiles={prefilledFiles}
-            />
-          </div>
+            <ErrorBoundary fallbackMessage="An error occurred in the case input form. Please retry below.">
+              <CaseInput
+                onSubmit={handleSubmit}
+                loading={loading}
+                initialDescription={prefilledDescription}
+                initialFiles={prefilledFiles}
+              />
+            </ErrorBoundary>
+          </section>
         )}
 
         {/* STEP 2: EXTRACT (Loading state) */}
         {step === STEP_EXTRACT && (
-          <LoadingOverlay
-            message={loadingMsg || 'Analyzing case facts with Gemini AI…'}
-            subtext="Extracting parties, mapping chronology, evaluating evidence reliability with XGBoost model, and checking Karnataka/Model Tenancy Act provisions…"
-          />
+          <section aria-label="Case Extraction Progress">
+            <LoadingOverlay
+              message={loadingMsg || 'Analyzing case facts with Gemini AI…'}
+              subtext="Extracting parties, mapping chronology, evaluating evidence reliability with XGBoost model, and checking Karnataka/Model Tenancy Act provisions…"
+            />
+          </section>
         )}
 
         {/* STEP 3: INTERVIEW */}
         {step === STEP_INTERVIEW && caseState && (
-          <>
+          <section aria-label="Clarification Interview Section">
             {/* Extraction Quick Metrics Bar */}
             <div className="glass-card p-4 mb-4 animate-slide-up border border-white/[0.08]">
               <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -357,30 +366,38 @@ export default function App() {
               </div>
             </div>
 
-            <InterviewPanel
-              state={caseState}
-              onAnswer={handleAnswer}
-              onSkip={handleCompile}
-              loading={loading}
-              error={error}
-              onClearError={clearErr}
-            />
-          </>
+            <ErrorBoundary fallbackMessage="An error occurred in the clarification interview. Click below to retry or skip to the case report.">
+              <InterviewPanel
+                state={caseState}
+                onAnswer={handleAnswer}
+                onSkip={handleCompile}
+                loading={loading}
+                error={error}
+                onClearError={clearErr}
+              />
+            </ErrorBoundary>
+          </section>
         )}
 
         {/* STEP 4: COMPILE (Loading state) */}
         {step === STEP_COMPILE && loading && (
-          <LoadingOverlay
-            message="Synthesizing Final 11-Section Executive Legal Brief…"
-            subtext="Deduplicating party records, structuring chronological facts, calculating statutory grounding, and compiling court-ready dossier…"
-          />
+          <section aria-label="Brief Compilation Progress">
+            <LoadingOverlay
+              message="Synthesizing Final 11-Section Executive Legal Brief…"
+              subtext="Deduplicating party records, structuring chronological facts, calculating statutory grounding, and compiling court-ready dossier…"
+            />
+          </section>
         )}
 
         {/* STEP 5: FINAL REPORT OUTPUT (Top-down aesthetic list) */}
         {step === STEP_COMPILE && !loading && caseFile && (
-          <CaseFileOutput caseFile={caseFile} onReset={handleReset} />
+          <section aria-label="Compiled Legal Case Dossier">
+            <ErrorBoundary fallbackMessage="An error occurred rendering the case brief. Please retry or click New Case.">
+              <CaseFileOutput caseFile={caseFile} onReset={handleReset} />
+            </ErrorBoundary>
+          </section>
         )}
-      </div>
+      </main>
     </div>
   )
 }

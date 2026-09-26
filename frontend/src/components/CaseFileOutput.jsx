@@ -244,25 +244,32 @@ export default function CaseFileOutput({ caseFile, onReset }) {
             onClick={handleDownloadPDF}
             id="download-pdf-btn"
             disabled={downloadingPdf}
-            className="btn-gold flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50"
+            aria-label={downloadingPdf ? 'Exporting court-ready PDF brief' : 'Download court-ready PDF brief'}
+            className="btn-gold flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gold-400"
           >
-            {downloadingPdf ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+            {downloadingPdf ? (
+              <Loader2 size={14} className="animate-spin" role="status" aria-label="Exporting PDF brief" />
+            ) : (
+              <FileText size={14} aria-hidden="true" />
+            )}
             <span>{downloadingPdf ? 'Exporting PDF…' : 'Download PDF Report'}</span>
           </button>
 
           <button
             onClick={() => downloadJSON(caseFile, `case-file-${meta?.session_id?.slice(0, 8)}.json`)}
             id="download-case-btn"
-            className="btn-glass flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+            aria-label="Download raw case brief JSON data"
+            className="btn-glass flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold-400"
           >
-            <Download size={13} />
+            <Download size={13} aria-hidden="true" />
             <span>JSON</span>
           </button>
 
           {onReset && (
             <button
               onClick={onReset}
-              className="text-xs px-3 py-2 rounded-xl bg-navy-900 border border-navy-700 hover:border-slate-500 text-slate-300 transition-colors cursor-pointer"
+              aria-label="Start new case analysis"
+              className="text-xs px-3 py-2 rounded-xl bg-navy-900 border border-navy-700 hover:border-slate-500 text-slate-300 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold-400"
             >
               New Case
             </button>

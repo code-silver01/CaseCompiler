@@ -97,7 +97,11 @@ export default function InterviewPanel({ state, onAnswer, onSkip, loading, error
       </div>
 
       {/* Chat scroll area */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div
+        className="flex-1 overflow-y-auto px-5 py-4 space-y-4"
+        aria-live="polite"
+        aria-label="AI intake conversation messages"
+      >
         {/* Render past history */}
         {history.map((msg, i) => (
           <ChatBubble key={i} role={msg.role} content={msg.content} />
@@ -109,7 +113,7 @@ export default function InterviewPanel({ state, onAnswer, onSkip, loading, error
             <ChatBubble role="assistant" content={question.question} />
             {question.rationale && (
               <p className="text-xs text-slate-500 ml-11 italic flex items-center gap-1">
-                <span>↳</span> {question.rationale}
+                <span aria-hidden="true">↳</span> {question.rationale}
               </p>
             )}
           </div>
@@ -117,13 +121,14 @@ export default function InterviewPanel({ state, onAnswer, onSkip, loading, error
 
         {/* Typing indicator */}
         {loading && (
-          <div className="flex gap-3 animate-fade-in">
+          <div className="flex gap-3 animate-fade-in" role="status" aria-live="polite">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shrink-0">
-              <span className="text-navy-950 text-xs font-bold">AI</span>
+              <span className="text-navy-950 text-xs font-bold" aria-hidden="true">AI</span>
             </div>
             <div className="bg-navy-800 border border-navy-700/80 rounded-2xl rounded-tl-sm">
               <TypingIndicator />
             </div>
+            <span className="sr-only">AI assistant is thinking...</span>
           </div>
         )}
 
@@ -210,22 +215,28 @@ export default function InterviewPanel({ state, onAnswer, onSkip, loading, error
             <input
               ref={inputRef}
               id="interview-answer-input"
+              aria-label="Your response to clarification question"
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={reachedThreeMilestone ? "Type more details, or click 'Generate Report Now' above…" : "Type your answer…"}
               disabled={loading}
-              className="flex-1 input-legal py-2.5"
+              className="flex-1 input-legal py-2.5 focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
               id="send-answer-btn"
+              aria-label="Send clarification answer"
               className="px-4 py-2.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-navy-950
                          font-semibold text-sm transition-all disabled:opacity-40
-                         disabled:cursor-not-allowed flex items-center gap-1.5"
+                         disabled:cursor-not-allowed flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-gold-400"
             >
-              {loading ? <Loader2 size={15} className="animate-spin" /> : <ChevronRight size={15} />}
+              {loading ? (
+                <Loader2 size={15} className="animate-spin" role="status" aria-label="Sending answer" />
+              ) : (
+                <ChevronRight size={15} aria-hidden="true" />
+              )}
             </button>
           </div>
           <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500">

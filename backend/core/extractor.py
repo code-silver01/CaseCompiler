@@ -61,6 +61,7 @@ _primary_cooldown_until: float = 0.0
 
 
 def get_client() -> genai.Client:
+    """Return the shared Google GenAI client instance initialized with API credentials."""
     global _client
     if _client is None:
         _client = genai.Client(

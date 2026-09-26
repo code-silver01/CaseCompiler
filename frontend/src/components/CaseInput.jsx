@@ -10,13 +10,15 @@ function FileChip({ file, onRemove }) {
   const Icon = isImage ? Image : FileText
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-navy-800 border border-navy-700 text-sm text-slate-300 group">
-      <Icon size={13} className="text-gold-400 shrink-0" />
+      <Icon size={13} className="text-gold-400 shrink-0" aria-hidden="true" />
       <span className="max-w-[140px] truncate">{file.name}</span>
       <button
+        type="button"
         onClick={() => onRemove(file)}
-        className="ml-1 text-slate-500 hover:text-red-400 transition-colors"
+        aria-label={`Remove file ${file.name}`}
+        className="ml-1 text-slate-500 hover:text-red-400 transition-colors focus:outline-none focus:ring-1 focus:ring-red-400 rounded"
       >
-        <X size={13} />
+        <X size={13} aria-hidden="true" />
       </button>
     </div>
   )
@@ -140,19 +142,21 @@ export default function CaseInput({ onSubmit, loading, initialDescription = '', 
             type="button"
             onClick={handleInsertSample}
             disabled={loadingSample}
-            className="text-xs text-gold-400 hover:text-gold-300 transition-colors underline font-medium cursor-pointer flex items-center gap-1.5"
+            aria-label="Insert sample dispute with 3 supporting documents"
+            className="text-xs text-gold-400 hover:text-gold-300 transition-colors underline font-medium cursor-pointer flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-gold-400 rounded"
           >
-            {loadingSample && <Loader2 size={12} className="animate-spin" />}
+            {loadingSample && <Loader2 size={12} className="animate-spin" role="status" aria-label="Loading sample" />}
             <span>Insert Sample + 3 Supporting Docs</span>
           </button>
         </div>
         <textarea
           id="case-description"
+          aria-label="Legal case description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Example: My landlord, Ramesh Kumar, has refused to return my security deposit of ₹50,000 after I vacated the flat at 12B Indiranagar, Bengaluru on 15 August 2024. The tenancy started in March 2022 and I gave proper 2-month notice in writing. He is claiming deductions for damage that was already present when I moved in..."
           rows={8}
-          className="input-legal resize-none leading-relaxed"
+          className="input-legal resize-none leading-relaxed focus:outline-none focus:ring-2 focus:ring-gold-400/80"
           disabled={loading}
         />
         <div className="flex justify-between items-center mt-1">
@@ -163,7 +167,7 @@ export default function CaseInput({ onSubmit, loading, initialDescription = '', 
 
       {/* File dropzone */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label htmlFor="file-upload-zone" className="block text-sm font-medium text-slate-300 mb-2">
           Evidence &amp; Documents
           <span className="ml-2 text-xs text-slate-500 font-normal">
             Optional — images, PDFs, text files (max {MAX_FILES} files, {MAX_MB} MB each)
@@ -171,15 +175,28 @@ export default function CaseInput({ onSubmit, loading, initialDescription = '', 
         </label>
         <div
           {...getRootProps()}
+          id="file-upload-zone"
+          role="button"
+          tabIndex={0}
+          aria-label="Upload evidence files and documents zone. Press Enter or Space to browse files, or drag and drop files here."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              const inputEl = document.querySelector('#file-upload-zone input')
+              if (inputEl) inputEl.click()
+            }
+          }}
           className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer
+            focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400
             ${isDragActive
               ? 'border-gold-400/60 bg-gold-400/5 scale-[1.01]'
               : 'border-navy-700 bg-navy-900/30 hover:border-navy-600 hover:bg-navy-900/50'
             }`}
         >
-          <input {...getInputProps()} />
+          <input {...getInputProps()} aria-label="Upload evidence files input" />
           <Upload
             size={28}
+            aria-hidden="true"
             className={`mx-auto mb-3 ${isDragActive ? 'text-gold-400' : 'text-slate-600'}`}
           />
           {isDragActive ? (
@@ -209,8 +226,8 @@ export default function CaseInput({ onSubmit, loading, initialDescription = '', 
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
-          <AlertCircle size={15} className="shrink-0" />
+        <div role="alert" className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
+          <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
           {error}
         </div>
       )}
@@ -220,21 +237,23 @@ export default function CaseInput({ onSubmit, loading, initialDescription = '', 
         type="submit"
         disabled={loading || !description.trim()}
         id="submit-case-btn"
+        aria-label={loading ? 'Analysing case facts and evidence' : 'Analyse case facts and evidence'}
         className="w-full py-3.5 px-6 rounded-xl font-semibold text-navy-950 text-sm
                    bg-gradient-to-r from-gold-400 to-gold-500
                    hover:from-gold-500 hover:to-gold-600
+                   focus:outline-none focus:ring-2 focus:ring-gold-400
                    disabled:opacity-40 disabled:cursor-not-allowed
                    transition-all duration-200 shadow-lg shadow-gold-500/10
                    flex items-center justify-center gap-2"
       >
         {loading ? (
           <>
-            <Loader2 size={16} className="animate-spin" />
+            <Loader2 size={16} className="animate-spin" role="status" aria-label="Processing analysis" />
             Analysing case…
           </>
         ) : (
           <>
-            <Scale size={16} />
+            <Scale size={16} aria-hidden="true" />
             Analyse Case
           </>
         )}

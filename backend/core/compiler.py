@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from typing import Any
 
 import config
 from core.chronology import sort_events
@@ -17,11 +18,8 @@ from core.triage import compute_triage
 from schemas.case_schema import CaseState, ConfidenceLevel
 
 
-def compile_case_file(state: CaseState) -> dict:
-    """
-    Assemble and return the final case file as a structured dict.
-    Sections are numbered 1-11 as per the spec.
-    """
+def compile_case_file(state: CaseState) -> dict[str, Any]:
+    """Assemble and return the final 11-section case brief as a structured dictionary."""
     # Ensure triage is current
     if not state.triage:
         state.triage = compute_triage(state)

@@ -3,8 +3,12 @@
  * All requests are prefixed with /api. Supports VITE_API_URL in production.
  */
 
-const API_HOST = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : ''
-const BASE = `${API_HOST}/api`
+let rawHost = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
+if (rawHost && !rawHost.startsWith('http://') && !rawHost.startsWith('https://')) {
+  rawHost = `https://${rawHost}`
+}
+const API_HOST = rawHost
+const BASE = API_HOST ? `${API_HOST}/api` : '/api'
 
 async function request(method, path, body, isFormData = false) {
   const opts = {

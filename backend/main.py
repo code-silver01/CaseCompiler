@@ -66,6 +66,18 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 
+
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "service": "CaseCompiler API",
+        "version": "0.1.0-mvp",
+        "health": "/api/health",
+        "docs": "/docs",
+        "note": "Open your casecompiler-frontend service URL to interact with the full web app."
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

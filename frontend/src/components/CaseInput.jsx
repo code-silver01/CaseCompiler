@@ -154,14 +154,34 @@ export default function CaseInput({ onSubmit, loading, initialDescription = '', 
           aria-label="Legal case description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && description.trim() && !loading) {
+              e.preventDefault()
+              handleSubmit(e)
+            }
+          }}
           placeholder="Example: My landlord, Ramesh Kumar, has refused to return my security deposit of ₹50,000 after I vacated the flat at 12B Indiranagar, Bengaluru on 15 August 2024. The tenancy started in March 2022 and I gave proper 2-month notice in writing. He is claiming deductions for damage that was already present when I moved in..."
           rows={8}
           className="input-legal resize-none leading-relaxed focus:outline-none focus:ring-2 focus:ring-gold-400/80"
           disabled={loading}
         />
         <div className="flex justify-between items-center mt-1">
-          <span className="text-[11px] text-slate-500">Provide as many specific details as possible.</span>
-          <span className="text-xs text-slate-600 font-mono">{description.length} chars</span>
+          <span className="text-[11px] text-slate-500">
+            Provide specific details · Press <kbd className="px-1 py-0.5 rounded bg-navy-800 border border-navy-700 font-mono text-[10px] text-slate-400">Ctrl + Enter</kbd> to analyze
+          </span>
+          <div className="flex items-center gap-2.5">
+            {description.length > 0 && !loading && (
+              <button
+                type="button"
+                onClick={() => setDescription('')}
+                aria-label="Clear case description text"
+                className="text-[11px] text-slate-500 hover:text-red-400 transition-colors underline cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+            <span className="text-xs text-slate-600 font-mono">{description.length} chars</span>
+          </div>
         </div>
       </div>
 

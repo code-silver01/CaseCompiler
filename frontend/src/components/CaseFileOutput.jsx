@@ -16,7 +16,9 @@ import {
   DollarSign,
   Briefcase,
   Search,
-  Sparkles
+  Sparkles,
+  Copy,
+  Check
 } from 'lucide-react'
 import { api } from '../api/client'
 
@@ -197,6 +199,27 @@ export default function CaseFileOutput({ caseFile, onReset }) {
 
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [pdfError, setPdfError] = useState(null)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopySummary = () => {
+    const summaryText = `CASE DOSSIER BRIEF (Ref: ${meta?.session_id ? meta.session_id.slice(0, 8) : 'Brief'})
+Triage Urgency: ${caseFile.section_1_executive_summary?.triage_level || 'UNKNOWN'}
+Summary: ${caseFile.section_1_executive_summary?.case_background || 'N/A'}
+
+KEY CLAIMS:
+${(s6?.claims || []).map((c, i) => `${i + 1}. ${c.description} (Basis: ${c.legal_basis || 'Unspecified'})`).join('\n')}
+
+STATUTORY GROUNDS (POTENTIALLY RELEVANT):
+${(s10?.rag_results || []).map((r, i) => `${i + 1}. [${r.source_file}] ${r.excerpt.slice(0, 150)}...`).join('\n')}
+
+CONFIDENTIAL — PREPARED FOR ADVOCATE REVIEW`
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(summaryText)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
 
   const handleDownloadPDF = async () => {
     if (!meta?.session_id) return
@@ -253,6 +276,25 @@ export default function CaseFileOutput({ caseFile, onReset }) {
               <FileText size={14} aria-hidden="true" />
             )}
             <span>{downloadingPdf ? 'Exporting PDF…' : 'Download PDF Report'}</span>
+          </button>
+
+          <button
+            onClick={handleCopySummary}
+            id="copy-summary-btn"
+            aria-label="Copy brief summary to clipboard"
+            className="btn-glass flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold-400"
+          >
+            {copied ? (
+              <>
+                <Check size={13} className="text-emerald-400" aria-hidden="true" />
+                <span className="text-emerald-400">Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy size={13} aria-hidden="true" />
+                <span>Copy</span>
+              </>
+            )}
           </button>
 
           <button

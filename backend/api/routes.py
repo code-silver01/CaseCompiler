@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import shutil
 import tempfile
 import time
@@ -105,9 +106,14 @@ async def extract(
     Returns the updated session state.
     """
     state = _require_session(session_id)
+    description_clean = (description or "").strip()
+    if len(description_clean) > 50_000:
+        raise HTTPException(400, "Description exceeds maximum allowed limit of 50,000 characters.")
+    if not description_clean:
+        raise HTTPException(400, "Case description cannot be empty.")
 
     # Save description
-    state.original_description = description
+    state.original_description = description_clean
 
     # Write uploads to a temp dir so we can pass paths to Gemini
     tmp_dir = Path(tempfile.mkdtemp())
@@ -116,11 +122,12 @@ async def extract(
         for uf in files:
             if uf.filename:
                 _validate_upload(uf)
-                dest = tmp_dir / uf.filename
+                safe_name = _sanitize_filename(uf.filename)
+                dest = tmp_dir / safe_name
                 with open(dest, "wb") as f:
                     shutil.copyfileobj(uf.file, f)
-                uploaded.append((dest, uf.filename))
-                state.uploaded_filenames.append(uf.filename)
+                uploaded.append((dest, safe_name))
+                state.uploaded_filenames.append(safe_name)
 
         # -------------------------------------------------------------------
         # Phase 1: Parallel extraction & evidence description
@@ -423,7 +430,20 @@ def index_corpus(force_rebuild: bool = False):
 # Helpers
 # ---------------------------------------------------------------------------
 
+_SESSION_ID_REGEX = re.compile(r"^[a-zA-Z0-9_\-]{6,64}$")
+
+
+def _sanitize_filename(name: str) -> str:
+    """Strip path traversal components and restrict to safe alphanumeric characters."""
+    base = Path(name).name
+    sanitized = re.sub(r"[^a-zA-Z0-9_.-]", "_", base)
+    return sanitized[:120] or "unnamed_upload"
+
+
 def _require_session(session_id: str):
+    """Validate session ID format and return existing state or raise 400/404."""
+    if not _SESSION_ID_REGEX.match(session_id):
+        raise HTTPException(400, "Invalid session ID format.")
     state = get_session(session_id)
     if not state:
         raise HTTPException(404, f"Session '{session_id}' not found or expired.")
@@ -432,21 +452,29 @@ def _require_session(session_id: str):
 
 MAX_UPLOAD_BYTES_PER_FILE = 10 * 1024 * 1024  # 10MB limit
 
+_MAGIC_NUMBERS: dict[str, list[bytes]] = {
+    ".pdf": [b"%PDF-"],
+    ".jpg": [b"\xff\xd8\xff"],
+    ".jpeg": [b"\xff\xd8\xff"],
+    ".png": [b"\x89PNG\r\n\x1a\n", b"\x89PNG"],
+}
+
 
 def _validate_upload(upload: UploadFile) -> None:
-    """Validate uploaded file type and size before extraction begins."""
+    """Validate uploaded file type, size, and magic bytes before extraction begins."""
     allowed = {".pdf", ".jpg", ".jpeg", ".png"}
     filename = upload.filename or ""
-    suffix = Path(filename).suffix.lower()
+    safe_name = _sanitize_filename(filename)
+    suffix = Path(safe_name).suffix.lower()
 
     # 1. Type validation: reject anything outside pdf/jpg/jpeg/png
     if suffix not in allowed:
         raise HTTPException(
             400,
-            f"File '{filename}' has unsupported format '{suffix}'. Only PDF, JPG, JPEG, and PNG files are accepted.",
+            f"File '{safe_name}' has unsupported format '{suffix}'. Only PDF, JPG, JPEG, and PNG files are accepted.",
         )
 
-    # 2. Size validation: reject files over 10MB
+    # 2. Size validation: reject files over 10MB or empty files
     try:
         upload.file.seek(0, 2)  # seek to end to measure size
         size = upload.file.tell()
@@ -455,9 +483,21 @@ def _validate_upload(upload: UploadFile) -> None:
             size_mb = size / (1024 * 1024)
             raise HTTPException(
                 400,
-                f"File '{filename}' exceeds maximum allowed size of 10MB ({size_mb:.1f}MB uploaded).",
+                f"File '{safe_name}' exceeds maximum allowed size of 10MB ({size_mb:.1f}MB uploaded).",
+            )
+        if size == 0:
+            raise HTTPException(400, f"File '{safe_name}' is empty (0 bytes).")
+
+        # 3. Magic-byte verification to block disguised binaries/scripts
+        header = upload.file.read(16)
+        upload.file.seek(0)
+        expected_magics = _MAGIC_NUMBERS.get(suffix, [])
+        if expected_magics and not any(header.startswith(m) for m in expected_magics):
+            raise HTTPException(
+                400,
+                f"File '{safe_name}' contents do not match genuine '{suffix}' binary signature.",
             )
     except HTTPException:
         raise
     except Exception as e:
-        logger.warning("Could not measure size for upload '%s': %s", filename, e)
+        logger.warning("Could not measure or verify upload '%s': %s", safe_name, e)

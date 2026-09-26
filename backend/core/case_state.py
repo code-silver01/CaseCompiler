@@ -34,6 +34,7 @@ def create_session() -> CaseState:
 
 
 def get_session(session_id: str) -> CaseState | None:
+    """Retrieve an active case state by session ID, or None if expired/not found."""
     with _lock:
         return _store.get(session_id)
 
@@ -47,6 +48,7 @@ def save_session(state: CaseState) -> CaseState:
 
 
 def delete_session(session_id: str) -> bool:
+    """Remove a case session from the in-memory store. Returns True if deleted."""
     with _lock:
         if session_id in _store:
             del _store[session_id]
@@ -58,9 +60,15 @@ def _cleanup_expired() -> None:
     """Remove sessions older than SESSION_TTL_HOURS. Called opportunistically."""
     cutoff = datetime.now(timezone.utc) - timedelta(hours=SESSION_TTL_HOURS)
     with _lock:
-        expired = [
-            sid for sid, state in _store.items()
-            if datetime.fromisoformat(state.created_at) < cutoff
-        ]
+        expired = []
+        for sid, state in list(_store.items()):
+            try:
+                dt = datetime.fromisoformat(state.created_at)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if dt < cutoff:
+                    expired.append(sid)
+            except Exception:
+                pass
         for sid in expired:
-            del _store[sid]
+            _store.pop(sid, None)

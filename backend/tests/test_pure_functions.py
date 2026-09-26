@@ -150,12 +150,12 @@ def test_validate_upload_allowed_and_rejected():
     from fastapi import UploadFile, HTTPException
     from api.routes import _validate_upload
 
-    # 1. Valid PDF file
-    valid_pdf = UploadFile(filename="agreement.pdf", file=io.BytesIO(b"PDF content dummy"))
+    # 1. Valid PDF file (with %PDF- magic bytes)
+    valid_pdf = UploadFile(filename="agreement.pdf", file=io.BytesIO(b"%PDF-1.4 valid pdf content"))
     _validate_upload(valid_pdf)  # should not raise
 
-    # 2. Valid image files
-    valid_png = UploadFile(filename="receipt.png", file=io.BytesIO(b"PNG content dummy"))
+    # 2. Valid image files (with PNG magic bytes)
+    valid_png = UploadFile(filename="receipt.png", file=io.BytesIO(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR valid png"))
     _validate_upload(valid_png)  # should not raise
 
     # 3. Disallowed file extension (.exe, .zip, .docx)
@@ -166,9 +166,16 @@ def test_validate_upload_allowed_and_rejected():
     assert "unsupported format" in exc_info.value.detail.lower()
 
     # 4. File over 10MB
-    oversize_bytes = io.BytesIO(b"0" * (10 * 1024 * 1024 + 1024))
+    oversize_bytes = io.BytesIO(b"%PDF-" + b"0" * (10 * 1024 * 1024 + 1024))
     oversize_file = UploadFile(filename="large_scan.pdf", file=oversize_bytes)
     with pytest.raises(HTTPException) as exc_info_size:
         _validate_upload(oversize_file)
     assert exc_info_size.value.status_code == 400
     assert "exceeds maximum allowed size" in exc_info_size.value.detail.lower()
+
+    # 5. Spoofed file: .pdf extension with non-PDF text/binary content
+    spoofed_file = UploadFile(filename="spoofed.pdf", file=io.BytesIO(b"<html>malicious payload</html>"))
+    with pytest.raises(HTTPException) as exc_spoof:
+        _validate_upload(spoofed_file)
+    assert exc_spoof.value.status_code == 400
+    assert "binary signature" in exc_spoof.value.detail.lower()

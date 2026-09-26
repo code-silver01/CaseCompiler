@@ -17,12 +17,17 @@ const STEP_COMPILE = 'compile'
 function ErrorBanner({ message, onDismiss }) {
   return (
     <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-5 py-4 mb-6 animate-slide-up">
-      <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+      <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
       <div className="flex-1">
-        <p className="text-sm text-red-300 font-medium">Something went wrong</p>
-        <p className="text-xs text-red-400/80 mt-1">{message}</p>
+        <p className="text-sm text-red-300 font-semibold">Connection Notice</p>
+        <p className="text-xs text-red-300/80 mt-1 leading-relaxed">{message}</p>
+        {message && (message.includes('Render') || message.includes('backend server')) && (
+          <div className="text-[11px] text-amber-300/90 mt-2.5 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+            💡 <strong>Render Free Tier Note:</strong> Inactivity causes free web services to sleep. The first request automatically initiates wake-up (~30–50s). Once awake, subsequent requests process in seconds. Please wait 15–20 seconds and click submit again!
+          </div>
+        )}
       </div>
-      <button onClick={onDismiss} className="text-red-500 hover:text-red-300 transition-colors text-xs">✕</button>
+      <button onClick={onDismiss} className="text-red-500 hover:text-red-300 transition-colors text-xs p-1">✕</button>
     </div>
   )
 }
@@ -62,6 +67,26 @@ export default function App() {
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState(null)
   const [activePhase, setActivePhase] = useState('extraction')
+  const [backendHealth, setBackendHealth] = useState({ status: 'checking', model: '' })
+
+  // Check backend health on initial load
+  React.useEffect(() => {
+    let mounted = true
+    const checkHealth = async () => {
+      try {
+        const res = await api.health()
+        if (mounted) {
+          setBackendHealth({ status: 'online', model: res?.model || 'Gemini' })
+        }
+      } catch (e) {
+        if (mounted) {
+          setBackendHealth({ status: 'offline', error: e.message })
+        }
+      }
+    }
+    checkHealth()
+    return () => { mounted = false }
+  }, [])
 
   // Poll live sub-phase during extraction
   React.useEffect(() => {
@@ -217,6 +242,29 @@ export default function App() {
           </button>
 
           <div className="flex items-center gap-3">
+            {/* Live Backend Connection Indicator */}
+            <div
+              className="hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-navy-900 border border-navy-800 text-[11px] font-mono text-slate-300"
+              title={`API endpoint: ${api.getCurrentHost()}`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  backendHealth.status === 'online'
+                    ? 'bg-emerald-400 animate-pulse'
+                    : backendHealth.status === 'checking'
+                    ? 'bg-amber-400 animate-ping'
+                    : 'bg-red-400'
+                }`}
+              />
+              <span className="text-slate-400">
+                {backendHealth.status === 'online'
+                  ? 'API Online'
+                  : backendHealth.status === 'checking'
+                  ? 'Connecting…'
+                  : 'Backend Asleep'}
+              </span>
+            </div>
+
             {step !== STEP_DESCRIBE && (
               <button
                 onClick={handleReset}

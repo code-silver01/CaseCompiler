@@ -52,14 +52,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow Vite dev server & production origins
-cors_origins = config.CORS_ORIGINS
-allow_all = "*" in cors_origins or not cors_origins
-
+# CORS — allow Vite dev server, Render static frontend & all production origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if allow_all else cors_origins,
-    allow_credentials=not allow_all,
+    allow_origin_regex=r"^https?://.*",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

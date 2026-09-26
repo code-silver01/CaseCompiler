@@ -40,7 +40,7 @@ services:
         fromService:
           type: web
           name: casecompiler-backend
-          property: host
+          property: url
     routes:
       - type: rewrite
         source: /*
